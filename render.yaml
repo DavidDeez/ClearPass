@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: clearpass-ai
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: clearpass-cache
+    healthCheckPath: /health
+
+databases:
+  - name: clearpass-db
+    databaseName: clearpass
+    user: clearpass_user
+
+# Note: Using SQLite by default for now. 
+# For persistence on Render, a Disk should be attached to the web service.
+# Or better, migrate to the PostgreSQL database defined above.

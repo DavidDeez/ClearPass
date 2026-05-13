@@ -32,6 +32,9 @@ const SAMPLE_TRANSACTIONS = [
 // ============================================================
 document.addEventListener("DOMContentLoaded", () => {
     checkServer();
+    // Poll status every 10 seconds
+    setInterval(checkServer, 10000);
+    
     addTransaction();
     addTransaction();
     addTransaction();
@@ -46,16 +49,33 @@ document.addEventListener("DOMContentLoaded", () => {
 async function checkServer() {
     const dot = document.getElementById("serverDot");
     const txt = document.getElementById("serverStatus");
+    
+    console.log("Checking ClearPass AI status...");
+    
     try {
-        const r = await fetch(`${API}/health`, { signal: AbortSignal.timeout(5000) });
+        // Use AbortSignal.timeout if available, otherwise no timeout
+        const options = {};
+        if (AbortSignal.timeout) {
+            options.signal = AbortSignal.timeout(8000);
+        }
+
+        const r = await fetch(`${API}/health`, options);
+        if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
+        
         const d = await r.json();
+        console.log("Server online:", d);
+        
         dot.className = "status-dot online";
-        txt.textContent = "Models loaded";
-    } catch {
+        txt.textContent = "System Online";
+        txt.style.color = "var(--green)";
+    } catch (err) {
+        console.warn("Server check failed:", err.message);
         dot.className = "status-dot offline";
-        txt.textContent = "Server offline";
+        txt.textContent = "Server Offline";
+        txt.style.color = "var(--red)";
     }
 }
+
 
 // ============================================================
 // STEP NAVIGATION

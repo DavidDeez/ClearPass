@@ -81,8 +81,19 @@ body {
     background: var(--text-muted);
     transition: background 0.3s;
 }
-.status-dot.online { background: var(--green); box-shadow: 0 0 8px rgba(0,230,118,0.5); }
-.status-dot.offline { background: var(--red); }
+.status-dot.online { 
+    background: var(--green); 
+    box-shadow: 0 0 12px rgba(0,230,118,0.6); 
+    animation: pulse-green 2s infinite;
+}
+.status-dot.offline { background: var(--red); box-shadow: 0 0 8px rgba(255,82,82,0.4); }
+
+@keyframes pulse-green {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,230,118,0.7); }
+    70% { transform: scale(1.2); box-shadow: 0 0 0 10px rgba(0,230,118,0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,230,118,0); }
+}
+
 
 /* --- Steps Bar --- */
 .steps-bar {
