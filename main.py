@@ -45,6 +45,7 @@ from services.model_b_anomaly import detect_anomaly             # noqa: E402
 from services.model_c_graph import add_user_to_graph, score_graph  # noqa: E402
 from services.score_assembler import assemble_trust_score       # noqa: E402
 from services.cache import get_cached_verdict, cache_verdict    # noqa: E402
+from services.db import save_verification, get_verification, get_recent_verifications # noqa: E402
 
 logger.info("=== All models loaded — ClearPass ready ===")
 
@@ -118,6 +119,26 @@ async def health_check():
     """Liveness / readiness probe."""
     return {"status": "ok", "models": "loaded"}
 
+@app.get("/dashboard", include_in_schema=False)
+async def serve_dashboard():
+    """Serve the ClearPass Developer Dashboard."""
+    return FileResponse("static/dashboard.html")
+
+@app.get("/api/logs")
+async def get_logs():
+    """Fetch recent verifications for the developer console."""
+    return {"logs": get_recent_verifications(50)}
+
+class MonoAuth(BaseModel):
+    auth_code: str
+
+@app.post("/api/mono/exchange")
+async def mono_exchange(payload: MonoAuth):
+    """Simulate Mono Open Banking API exchanging auth code for transactions."""
+    # Generate 10 synthetic transactions as mock Mono data
+    from services.synthetic_data import generate_synthetic_transactions
+    return {"transactions": generate_synthetic_transactions(10)}
+
 
 @app.post("/verify")
 async def verify(payload: VerifyRequest):
@@ -137,6 +158,10 @@ async def verify(payload: VerifyRequest):
 
     # ---- Step 1: Cache check ----
     cached = get_cached_verdict(payload.bvn)
+    if not cached:
+        # Fallback to persistent tokenization in SQLite
+        cached = get_verification(payload.bvn)
+
     if cached is not None:
         elapsed = round((time.perf_counter() - start) * 1000, 2)
         logger.info("Returning cached verdict in %.2f ms", elapsed)
@@ -162,6 +187,7 @@ async def verify(payload: VerifyRequest):
                 "processing_time_ms": elapsed,
             }
             cache_verdict(payload.bvn, block_result)
+            save_verification(payload.bvn, block_result)
             return block_result
         face_match_score = face_result["score"]
     else:
@@ -204,8 +230,9 @@ async def verify(payload: VerifyRequest):
         "processing_time_ms": elapsed,
     }
 
-    # ---- Step 7: Cache ----
+    # ---- Step 7: Cache and Tokenize ----
     cache_verdict(payload.bvn, response)
+    save_verification(payload.bvn, response)
 
     logger.info(
         "=== /verify complete — score: %d, verdict: %s, time: %.2f ms ===",

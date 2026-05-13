@@ -9,6 +9,9 @@ const API = window.location.origin;
 let currentStep = 1;
 let selfieB64 = null;
 let cameraStream = null;
+let faceDetection = null;
+let mpCamera = null;
+let isFaceDetected = false;
 
 // --- Sample transaction data ---
 const SAMPLE_TRANSACTIONS = [
@@ -121,8 +124,44 @@ async function startCamera() {
         document.getElementById("cameraBox").onclick = null; // disable click-to-start while camera active
         document.getElementById("startCameraBtn").style.display = "none";
         document.getElementById("captureBtn").style.display = "inline-flex";
+        document.getElementById("captureBtn").disabled = true; // wait for liveness
         document.getElementById("retakeBtn").style.display = "none";
         document.getElementById("cameraOverlay").style.display = "flex";
+
+        // MediaPipe Face Detection for Liveness
+        if (window.FaceDetection && window.Camera) {
+            faceDetection = new FaceDetection({locateFile: (file) => {
+                return \`https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/\${file}\`;
+            }});
+            faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.7 });
+            faceDetection.onResults((results) => {
+                const statusEl = document.getElementById("livenessStatus");
+                if (results.detections.length > 0) {
+                    isFaceDetected = true;
+                    document.getElementById("captureBtn").disabled = false;
+                    statusEl.innerHTML = "✅ Liveness Verified: Face Detected";
+                    statusEl.style.color = "var(--green)";
+                } else {
+                    isFaceDetected = false;
+                    document.getElementById("captureBtn").disabled = true;
+                    statusEl.innerHTML = "Scanning for face...";
+                    statusEl.style.color = "white";
+                }
+            });
+            mpCamera = new Camera(video, {
+                onFrame: async () => {
+                    if (faceDetection && video.readyState >= 2) {
+                        await faceDetection.send({image: video});
+                    }
+                },
+                width: 640, height: 640
+            });
+            mpCamera.start();
+        } else {
+            isFaceDetected = true;
+            document.getElementById("captureBtn").disabled = false;
+            document.getElementById("livenessStatus").innerHTML = "Camera Ready";
+        }
     } catch (err) {
         console.error("Camera start error:", err);
         alert("Camera error: " + (err.name || "Unknown") + " - " + (err.message || "Access denied or not available."));
@@ -161,6 +200,8 @@ function retakePhoto() {
     document.getElementById("retakeBtn").style.display = "none";
     document.getElementById("captureBtn").style.display = "none";
     document.getElementById("startCameraBtn").style.display = "inline-flex";
+    if (mpCamera) { mpCamera.stop(); mpCamera = null; }
+    if (faceDetection) { faceDetection.close(); faceDetection = null; }
     if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
 }
 

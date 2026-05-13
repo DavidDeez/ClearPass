@@ -8,6 +8,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
+    
+    <!-- MediaPipe Liveness Scanner -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <!-- Animated background -->
@@ -104,7 +108,7 @@
                         </div>
                         <div class="camera-overlay" id="cameraOverlay" style="display:none">
                             <div class="face-guide"></div>
-                            <p>Position face in the circle</p>
+                            <p id="livenessStatus" style="background:rgba(0,0,0,0.7);padding:4px 8px;border-radius:4px;">Scanning for face...</p>
                         </div>
                     </div>
                     <div class="bio-actions">

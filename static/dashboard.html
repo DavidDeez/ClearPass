@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClearPass Developer Console</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a; --surface: #1e293b; --surface-hover: #334155;
+            --primary: #3b82f6; --text: #f8fafc; --text-muted: #94a3b8;
+            --green: #10b981; --red: #ef4444; --border: #334155;
+        }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; }
+        .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; }
+        .logo { font-size: 1.5rem; font-weight: 700; margin-bottom: 40px; display: flex; align-items: center; gap: 8px; }
+        .logo span { color: var(--primary); }
+        .nav-link { padding: 12px 16px; border-radius: 8px; color: var(--text-muted); text-decoration: none; font-weight: 500; margin-bottom: 8px; transition: 0.2s; }
+        .nav-link:hover, .nav-link.active { background: var(--surface-hover); color: var(--text); }
+        .main { flex: 1; padding: 40px; overflow-y: auto; }
+        .header { margin-bottom: 40px; }
+        .header h1 { margin: 0 0 8px 0; font-size: 2rem; }
+        .header p { margin: 0; color: var(--text-muted); }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 40px; }
+        .stat-card { background: var(--surface); padding: 24px; border-radius: 16px; border: 1px solid var(--border); }
+        .stat-title { color: var(--text-muted); font-size: 0.875rem; margin-bottom: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 2rem; font-weight: 700; }
+        .stat-change { font-size: 0.875rem; color: var(--green); margin-top: 8px; display: inline-block; }
+        .card { background: var(--surface); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 24px; }
+        .card-header { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .card-header h2 { margin: 0; font-size: 1.1rem; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table th, .table td { padding: 16px 24px; text-align: left; border-bottom: 1px solid var(--border); }
+        .table th { color: var(--text-muted); font-weight: 500; font-size: 0.875rem; }
+        .badge { padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-pass { background: rgba(16, 185, 129, 0.1); color: var(--green); }
+        .badge-block { background: rgba(239, 68, 68, 0.1); color: var(--red); }
+        .badge-review { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .api-key-box { padding: 16px; background: #0b1120; border-radius: 8px; font-family: monospace; color: var(--green); font-size: 1.1rem; border: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><path d="M14 2L26 8V20L14 26L2 20V8L14 2Z" fill="#3b82f6"/></svg>
+            ClearPass<span>AI</span>
+        </div>
+        <a href="#" class="nav-link active">Overview</a>
+        <a href="#" class="nav-link">Audit Logs</a>
+        <a href="#" class="nav-link">API Keys</a>
+        <a href="#" class="nav-link">Billing (SaaS)</a>
+        <div style="flex:1"></div>
+        <a href="/" class="nav-link">← Sandbox Test UI</a>
+    </aside>
+    <main class="main">
+        <div class="header">
+            <h1>Developer Console</h1>
+            <p>Reusable identity infrastructure for Nigerian fintechs.</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">Total Verifications</div>
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-change">↑ 12% this week</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Fraud Prevented (Rings)</div>
+                <div class="stat-value" id="stat-fraud">0</div>
+                <div class="stat-change">3 Ghost Borrowers Blocked</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Network Token Matches</div>
+                <div class="stat-value">84%</div>
+                <div class="stat-change" style="color:var(--text-muted)">Instant approvals</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Production API Keys</h2>
+                <button style="background:var(--primary);color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-weight:600;">Roll Key</button>
+            </div>
+            <div style="padding:24px;">
+                <p style="color:var(--text-muted); margin-top:0;">Use this key to initialize the 3-line JavaScript SDK or authenticate server-to-server requests.</p>
+                <div class="api-key-box">sk_live_clearpass_9d8f7a6b5c4d3e2f1a0b</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Live Verification Audit Stream</h2>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Identity (BVN Hash)</th>
+                        <th>Trust Score</th>
+                        <th>Verdict</th>
+                    </tr>
+                </thead>
+                <tbody id="logsTable">
+                    <tr><td colspan="4" style="text-align:center; color:var(--text-muted)">Loading logs...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        async function fetchLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                const data = await res.json();
+                const tbody = document.getElementById('logsTable');
+                tbody.innerHTML = '';
+                
+                let total = data.logs.length;
+                let fraud = data.logs.filter(l => l.verdict === 'BLOCK').length;
+                document.getElementById('stat-total').textContent = total;
+                document.getElementById('stat-fraud').textContent = fraud;
+
+                if (total === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted)">No verifications yet. Use the Sandbox to run tests.</td></tr>';
+                    return;
+                }
+
+                data.logs.forEach(log => {
+                    const tr = document.createElement('tr');
+                    const badgeClass = `badge-${log.verdict.toLowerCase()}`;
+                    const date = new Date(log.timestamp + 'Z').toLocaleString();
+                    const bvnMasked = log.bvn.substring(0, 4) + '***' + log.bvn.substring(log.bvn.length - 4);
+                    
+                    tr.innerHTML = `
+                        <td style="color:var(--text-muted); font-size:0.875rem">${date}</td>
+                        <td style="font-family:monospace">${bvnMasked}</td>
+                        <td><strong>${log.trust_score}</strong>/100</td>
+                        <td><span class="badge ${badgeClass}">${log.verdict}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error("Failed to load logs", err);
+            }
+        }
+        
+        fetchLogs();
+        // Poll every 5s for live effect
+        setInterval(fetchLogs, 5000);
+    </script>
+</body>
+</html>
