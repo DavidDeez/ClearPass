@@ -85,9 +85,21 @@ function validateStep1() {
     const bvn = document.getElementById("bvn").value.trim();
     const phone = document.getElementById("phone").value.trim();
     const address = document.getElementById("address").value.trim();
-    if (!bvn || bvn.length < 10) { shakeField("bvn"); return false; }
-    if (!phone || phone.length < 10) { shakeField("phone"); return false; }
-    if (!address) { shakeField("address"); return false; }
+    if (!bvn || bvn.length < 10) { 
+        alert("Please enter a valid 11-digit BVN.");
+        shakeField("bvn"); 
+        return false; 
+    }
+    if (!phone || phone.length < 10) { 
+        alert("Please enter a valid Phone Number (at least 10 digits).");
+        shakeField("phone"); 
+        return false; 
+    }
+    if (!address) { 
+        alert("Please enter your Residential Address.");
+        shakeField("address"); 
+        return false; 
+    }
     return true;
 }
 
@@ -131,7 +143,7 @@ async function startCamera() {
         // MediaPipe Face Detection for Liveness
         if (window.FaceDetection && window.Camera) {
             faceDetection = new FaceDetection({locateFile: (file) => {
-                return \`https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/\${file}\`;
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
             }});
             faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.7 });
             faceDetection.onResults((results) => {
