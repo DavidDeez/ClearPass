@@ -210,6 +210,87 @@ function goToStep(n) {
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function renderResults(d) {
+    // 1. Animate Gauge and Score
+    const scoreEl = document.getElementById("finalScore");
+    const gaugeFill = document.getElementById("gaugeFill");
+    let current = 0;
+    const target = Math.round(d.trust_score);
+    
+    const interval = setInterval(() => {
+        if (current >= target) {
+            clearInterval(interval);
+        } else {
+            current++;
+            scoreEl.textContent = current;
+            const deg = (current / 100) * 180;
+            gaugeFill.style.background = `conic-gradient(var(--accent) ${deg}deg, transparent 0deg)`;
+        }
+    }, 15);
+
+    // 2. Set Verdict Badge
+    const badge = document.getElementById("verdictBadge");
+    badge.textContent = d.verdict;
+    badge.className = "verdict-badge " + (d.verdict === "PASS" ? "verdict-pass" : "verdict-fail");
+
+    // 3. Render SHAP Chart
+    const shapChart = document.getElementById("shapChart");
+    shapChart.innerHTML = "";
+    
+    // Sample SHAP values based on reasons
+    const factors = [
+        { label: "Behavioral Rhythm", val: d.verdict === "PASS" ? 85 : 30 },
+        { label: "Identity Continuity", val: 90 },
+        { label: "Network Stability", val: d.verdict === "PASS" ? 75 : 15 },
+        { label: "Anomaly Score", val: d.verdict === "PASS" ? 95 : 45 }
+    ];
+
+    factors.forEach(f => {
+        const row = document.createElement("div");
+        row.className = "shap-row";
+        const isPos = f.val > 50;
+        row.innerHTML = `
+            <div class="shap-label">${f.label}</div>
+            <div class="shap-bar-bg">
+                <div class="shap-bar ${isPos ? 'shap-pos' : 'shap-neg'}" style="width: 0%"></div>
+            </div>
+        `;
+        shapChart.appendChild(row);
+        setTimeout(() => {
+            row.querySelector(".shap-bar").style.width = f.val + "%";
+        }, 100);
+    });
+
+    // 4. Squad Enforcement
+    const squadTitle = document.getElementById("squadTitle");
+    const squadStatus = document.getElementById("squadStatus");
+    const squadBox = document.getElementById("squadEnforcement");
+    const icon = squadBox.querySelector(".enforcement-icon");
+
+    if (d.verdict === "PASS") {
+        icon.textContent = "✅";
+        squadTitle.textContent = "Squad: Payout Authorized";
+        squadStatus.textContent = "Identity verified. Funds released via GTCO Squad API.";
+        squadBox.style.borderColor = "var(--green)";
+    } else {
+        icon.textContent = "🛡️";
+        squadTitle.textContent = "Squad: Payout Halted";
+        squadStatus.textContent = "High fraud risk detected. Transaction flagged for manual review.";
+        squadBox.style.borderColor = "var(--red)";
+    }
+
+    // 5. Reason List
+    const list = document.getElementById("reasonList");
+    list.innerHTML = "";
+    if (d.reasons) {
+        d.reasons.forEach(r => {
+            const li = document.createElement("li");
+            li.textContent = r;
+            list.appendChild(li);
+        });
+    }
+}
+
 function validateStep1() {
     const bvn = document.getElementById("bvn").value.trim();
     const phone = document.getElementById("phone").value.trim();
@@ -299,6 +380,13 @@ async function startCamera() {
                         blinkCount++;
                         wasEyesOpen = false;
                         console.log("Blink detected!", blinkCount);
+                        
+                        // Update Progress Ring
+                        const circle = document.querySelector('.progress-ring__circle');
+                        const radius = circle.r.baseVal.value;
+                        const circumference = radius * 2 * Math.PI;
+                        const offset = circumference - (blinkCount / 1) * circumference;
+                        circle.style.strokeDashoffset = offset;
                     } else if (!isBlinking) {
                         wasEyesOpen = true;
                     }
