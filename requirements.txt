@@ -13,11 +13,8 @@ shap
 numpy
 pandas
 
-# === Face Recognition ===
-facenet-pytorch
+# === Face Recognition (Server-Lite: Using Frontend AI) ===
 Pillow
-torch
-torchvision
 
 # === Graph Analytics ===
 networkx

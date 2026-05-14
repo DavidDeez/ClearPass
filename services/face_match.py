@@ -12,34 +12,40 @@ Threshold of 0.82 was chosen based on empirical fintech KYC benchmarks
 for balancing false-accept vs. false-reject rates.
 """
 
+import logging
 import base64
 import io
-import logging
-from typing import Any
-
 import numpy as np
-import torch
-from facenet_pytorch import MTCNN, InceptionResnetV1
+from typing import Any
 from PIL import Image
 
 logger = logging.getLogger("clearpass.face_match")
 
-# ---------------------------------------------------------------------------
-# Model Initialisation (runs once at import / startup)
-# ---------------------------------------------------------------------------
-_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-logger.info("Face-match device: %s", _device)
+# --- Server-Lite Check ---
+try:
+    import torch
+    from facenet_pytorch import MTCNN, InceptionResnetV1
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    logger.warning("Torch/FaceNet not found. Running in 'Server-Lite' mode (Frontend AI required).")
 
-_mtcnn = MTCNN(
-    image_size=160,
-    margin=20,
-    keep_all=False,         # return only highest-probability face
-    min_face_size=40,
-    thresholds=[0.6, 0.7, 0.7],
-    device=_device,
-)
+# ---------------------------------------------------------------------------
+# Global AI models (Lazy-loaded inside functions to avoid startup timeouts)
+# ---------------------------------------------------------------------------
+_mtcnn = None
+_resnet = None
 
-_resnet = InceptionResnetV1(pretrained="vggface2").eval().to(_device)
+def _get_models():
+    global _mtcnn, _resnet
+    if not HAS_TORCH:
+        raise ImportError("Server-Lite mode: Server-side matching is disabled. Please use Frontend AI matching.")
+    
+    if _mtcnn is None:
+        logger.info("Initializing MTCNN and InceptionResnetV1 (Slow Startup)...")
+        _mtcnn = MTCNN(image_size=160, margin=20, keep_all=False, min_face_size=40, thresholds=[0.6, 0.7, 0.7], device='cpu')
+        _resnet = InceptionResnetV1(pretrained='vggface2').eval().to('cpu')
+    return _mtcnn, _resnet
 
 FACE_MATCH_THRESHOLD = 0.82
 
@@ -61,14 +67,16 @@ def _decode_b64_image(b64_string: str) -> Image.Image:
 
 def _get_embedding(image: Image.Image) -> np.ndarray:
     """Detect a face and return its 512-d embedding vector."""
-    face_tensor = _mtcnn(image)
+    mtcnn, resnet = _get_models()
+    
+    face_tensor = mtcnn(image)
     if face_tensor is None:
         raise ValueError("No face detected in the provided image.")
 
     # face_tensor shape: (3, 160, 160) — add batch dim
-    face_batch = face_tensor.unsqueeze(0).to(_device)
+    face_batch = face_tensor.unsqueeze(0).to('cpu')
     with torch.no_grad():
-        embedding = _resnet(face_batch)
+        embedding = resnet(face_batch)
 
     return embedding.cpu().numpy().flatten()
 
