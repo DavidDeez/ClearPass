@@ -34,20 +34,12 @@ logging.basicConfig(
 logger = logging.getLogger("clearpass.main")
 
 # ---------------------------------------------------------------------------
-# Eagerly import service modules so models train at startup
+# Lazy Loading Helpers
 # ---------------------------------------------------------------------------
-logger.info("=== ClearPass startup: loading models ===")
+logger.info("=== ClearPass starting (Lazy Loading Mode) ===")
 
-from services.face_match import match_faces                     # noqa: E402
-from services.feature_extractor import extract_features         # noqa: E402
-from services.model_a_behavior import score_behavior            # noqa: E402
-from services.model_b_anomaly import detect_anomaly             # noqa: E402
-from services.model_c_graph import add_user_to_graph, score_graph  # noqa: E402
-from services.score_assembler import assemble_trust_score       # noqa: E402
-from services.cache import get_cached_verdict, cache_verdict    # noqa: E402
-from services.db import save_verification, get_verification, get_recent_verifications # noqa: E402
-
-logger.info("=== All models loaded — ClearPass ready ===")
+# We move heavy imports inside functions to prevent Render startup timeouts.
+# Models will load on first use.
 
 # ---------------------------------------------------------------------------
 # FastAPI App
@@ -155,6 +147,7 @@ async def serve_dashboard():
 @app.get("/api/logs")
 async def get_logs():
     """Fetch recent verifications for the developer console."""
+    from services.db import get_recent_verifications
     return {"logs": get_recent_verifications(50)}
 
 class MonoAuth(BaseModel):
@@ -171,16 +164,18 @@ async def mono_exchange(payload: MonoAuth):
 @app.post("/verify")
 async def verify(payload: VerifyRequest):
     """
-    Full ClearPass KYC verification pipeline.
-
-    1. Cache check
-    2. Biometric face match (blocks on failure)
-    3. Financial feature extraction
-    4. Parallel ML scoring (Models A, B, C)
-    5. Trust score assembly
-    6. Cache result
-    7. Return verdict
+    Full ClearPass KYC verification pipeline (Lazy Loading).
     """
+    # Lazy imports to speed up startup
+    from services.face_match import match_faces
+    from services.feature_extractor import extract_features
+    from services.model_a_behavior import score_behavior
+    from services.model_b_anomaly import detect_anomaly
+    from services.model_c_graph import add_user_to_graph, score_graph
+    from services.score_assembler import assemble_trust_score
+    from services.cache import get_cached_verdict, cache_verdict
+    from services.db import save_verification, get_verification
+
     start = time.perf_counter()
     logger.info("=== /verify request for BVN %s ===", payload.bvn[:6] + "****")
 
