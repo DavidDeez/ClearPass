@@ -66,8 +66,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
 # Serve static assets (CSS, JS)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 _executor = ThreadPoolExecutor(max_workers=4)
 
@@ -111,18 +120,37 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/", include_in_schema=False)
 async def serve_frontend():
     """Serve the ClearPass frontend UI."""
-    return FileResponse("static/index.html")
+    index_path = STATIC_DIR / "index.html"
+    if not index_path.exists():
+        logger.error(f"Frontend file missing: {index_path}")
+        return JSONResponse(
+            status_code=404, 
+            content={"detail": "Frontend index.html not found. Check deployment structure."}
+        )
+    return FileResponse(index_path)
 
 
 @app.get("/health")
 async def health_check():
     """Liveness / readiness probe."""
-    return {"status": "ok", "models": "loaded"}
+    return {
+        "status": "ok", 
+        "models": "loaded", 
+        "cwd": os.getcwd(),
+        "static_exists": STATIC_DIR.exists()
+    }
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse(STATIC_DIR / "favicon.ico") if (STATIC_DIR / "favicon.ico").exists() else JSONResponse(status_code=204, content=None)
 
 @app.get("/dashboard", include_in_schema=False)
 async def serve_dashboard():
     """Serve the ClearPass Developer Dashboard."""
-    return FileResponse("static/dashboard.html")
+    dash_path = STATIC_DIR / "dashboard.html"
+    if not dash_path.exists():
+        return JSONResponse(status_code=404, content={"detail": "Dashboard file missing"})
+    return FileResponse(dash_path)
 
 @app.get("/api/logs")
 async def get_logs():
