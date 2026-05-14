@@ -159,10 +159,43 @@ class MonoAuth(BaseModel):
 
 @app.post("/api/mono/exchange")
 async def mono_exchange(payload: MonoAuth):
-    """Simulate Mono Open Banking API exchanging auth code for transactions."""
-    # Generate 10 synthetic transactions as mock Mono data
-    from services.synthetic_data import generate_synthetic_transactions
-    return {"transactions": generate_synthetic_transactions(10)}
+    """Real Mono integration flow: Auth code -> Transactions."""
+    from services.mono import MonoService
+    transactions = await MonoService.exchange_auth_code(payload.auth_code)
+    return {"transactions": transactions}
+
+
+class PayoutRequest(BaseModel):
+    bvn: str
+    amount: float
+    account_number: str
+
+@app.post("/api/squad/payout")
+async def squad_payout(payload: PayoutRequest):
+    """
+    The Causal Gate Endpoint.
+    Only allows payouts if the user has a passing Trust Score.
+    """
+    from services.db import get_verification
+    from services.squad import SquadService
+
+    verdict = get_verification(payload.bvn)
+    if not verdict:
+        raise HTTPException(status_code=404, detail="Identity not verified. Run ClearPass first.")
+
+    trust_score = verdict.get("trust_score", 0)
+    
+    result = await SquadService.execute_conditional_payout(
+        payload.bvn, 
+        payload.amount, 
+        trust_score, 
+        payload.account_number
+    )
+    
+    if result["status"] == "blocked":
+        raise HTTPException(status_code=403, detail=result)
+        
+    return result
 
 
 @app.post("/verify")
@@ -260,6 +293,10 @@ async def verify(payload: VerifyRequest):
     # ---- Step 7: Cache and Tokenize ----
     cache_verdict(payload.bvn, response)
     save_verification(payload.bvn, response)
+
+    # ---- Step 8: SaaS Billing (Squad) ----
+    from services.squad import SquadService
+    SquadService.audit_verification(payload.bvn)
 
     logger.info(
         "=== /verify complete — score: %d, verdict: %s, time: %.2f ms ===",

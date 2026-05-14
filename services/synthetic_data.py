@@ -12,6 +12,7 @@ and failure rates observed in the Nigerian digital lending ecosystem.
 import logging
 import numpy as np
 import pandas as pd
+from typing import Any
 
 logger = logging.getLogger("clearpass.synthetic_data")
 
@@ -125,3 +126,32 @@ def generate_synthetic_data(
         list(data.columns),
     )
     return data
+
+
+def generate_synthetic_transactions(n: int = 10) -> list[dict[str, Any]]:
+    """
+    Generate a list of N realistic Nigerian fintech transactions.
+    """
+    rng = np.random.default_rng()
+    categories = ["Salary", "Rent", "Groceries", "Transfer from ", "Loan Repayment", "Data/Airtime"]
+    types = ["credit", "debit"]
+    
+    txs = []
+    for _ in range(n):
+        t = rng.choice(types)
+        amount = round(float(rng.lognormal(mean=9, sigma=1.2)), 2)
+        if t == "credit":
+            amount = max(amount, 50000) # Ensure credits are somewhat significant
+        
+        narration = rng.choice(categories)
+        if "Transfer" in narration:
+            narration += rng.choice(["Musa", "Chidi", "Olumide", "QuickCredit"])
+            
+        txs.append({
+            "amount": amount,
+            "date": "2025-05-14", # Simple static date for mock
+            "status": "successful",
+            "narration": narration,
+            "type": t
+        })
+    return txs
