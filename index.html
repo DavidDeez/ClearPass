@@ -9,9 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
     
-    <!-- MediaPipe Liveness Scanner -->
+    <!-- MediaPipe FaceMesh for Advanced Liveness (Blink Detection) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/face_detection.js" crossorigin="anonymous"></script>
     
     <!-- Face-API for Frontend Biometrics (Speed Mode) -->
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
@@ -63,6 +63,16 @@
                 <h2>Personal Identity</h2>
                 <p>Enter the subject's identification details</p>
             </div>
+
+            <div id="reusableIdentityBanner" class="reusable-banner" style="display:none">
+                <div class="banner-icon">🛡️</div>
+                <div class="banner-text">
+                    <strong>ClearPass Network Match!</strong>
+                    <p>This identity is already verified. You can skip to results or continue for a fresh audit.</p>
+                </div>
+                <button class="btn btn-sm btn-accent" onclick="useExistingIdentity()">Use Instant Trust</button>
+            </div>
+
             <div class="form-grid">
                 <div class="form-group">
                     <label for="bvn">BVN (Bank Verification Number)</label>

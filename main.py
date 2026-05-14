@@ -175,6 +175,23 @@ async def serve_dashboard():
         return JSONResponse(status_code=404, content={"detail": "Dashboard file missing"})
     return FileResponse(dash_path)
 
+@app.get("/api/identity/check/{bvn}")
+async def check_identity(bvn: str):
+    """
+    Identity Search: Checks if a user is already tokenized in the network.
+    Part of the 'Verify Once, Use Everywhere' vision.
+    """
+    from services.db import get_verification
+    record = get_verification(bvn)
+    if record:
+        return {
+            "found": True,
+            "trust_score": record["trust_score"],
+            "verdict": record["verdict"],
+            "timestamp": record.get("timestamp")
+        }
+    return {"found": False}
+
 @app.get("/api/logs")
 async def get_logs():
     """Fetch recent verifications for the developer console."""

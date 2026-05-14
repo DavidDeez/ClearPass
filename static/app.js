@@ -45,9 +45,51 @@ document.addEventListener("DOMContentLoaded", () => {
         devInput.value = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
     }
 
+    // Identity Search Trigger
+    document.getElementById("bvn").addEventListener("input", debounce(searchIdentity, 1000));
+
     // Load Face-API models for Speed Mode
     loadFaceModels();
 });
+
+let modelsLoaded = false;
+let officialIdB64 = null;
+let faceMatchScore = null;
+let existingIdentity = null;
+
+function debounce(func, wait) {
+    let timeout;
+    return function() {
+        const context = this, args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+    };
+}
+
+async function searchIdentity() {
+    const bvn = document.getElementById("bvn").value.trim();
+    if (bvn.length < 11) {
+        document.getElementById("reusableIdentityBanner").style.display = "none";
+        return;
+    }
+
+    try {
+        const r = await fetch(`${API}/api/identity/check/${bvn}`);
+        const d = await r.json();
+        if (d.found) {
+            existingIdentity = d;
+            document.getElementById("reusableIdentityBanner").style.display = "flex";
+        } else {
+            document.getElementById("reusableIdentityBanner").style.display = "none";
+        }
+    } catch (e) { console.error("Search failed:", e); }
+}
+
+function useExistingIdentity() {
+    if (!existingIdentity) return;
+    renderResults(existingIdentity);
+    goToStep(4);
+}
 
 let modelsLoaded = false;
 let officialIdB64 = null;
@@ -231,31 +273,58 @@ async function startCamera() {
         document.getElementById("retakeBtn").style.display = "none";
         document.getElementById("cameraOverlay").style.display = "flex";
 
-        // MediaPipe Face Detection for Liveness
-        if (window.FaceDetection && window.Camera) {
-            faceDetection = new FaceDetection({locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
+        // Advanced Blink Detection using FaceMesh
+        if (window.FaceMesh) {
+            const faceMesh = new FaceMesh({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
             }});
-            faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.7 });
-            faceDetection.onResults((results) => {
+            faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            let blinkCount = 0;
+            let wasEyesOpen = true;
+
+            faceMesh.onResults((results) => {
                 const statusEl = document.getElementById("livenessStatus");
-                if (results.detections.length > 0) {
-                    isFaceDetected = true;
-                    document.getElementById("captureBtn").disabled = false;
-                    statusEl.innerHTML = "✅ Liveness Verified: Face Detected";
-                    statusEl.style.color = "var(--green)";
+                if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                    const landmarks = results.multiFaceLandmarks[0];
+                    
+                    // Simple EAR (Eye Aspect Ratio) calculation using key points
+                    const p159 = landmarks[159], p145 = landmarks[145];
+                    const leftEyeDist = Math.sqrt(Math.pow(p159.x-p145.x,2) + Math.pow(p159.y-p145.y,2));
+                    
+                    const isBlinking = leftEyeDist < 0.012;
+
+                    if (wasEyesOpen && isBlinking) {
+                        blinkCount++;
+                        wasEyesOpen = false;
+                        console.log("Blink detected!", blinkCount);
+                    } else if (!isBlinking) {
+                        wasEyesOpen = true;
+                    }
+
+                    if (blinkCount >= 1) {
+                        isFaceDetected = true;
+                        document.getElementById("captureBtn").disabled = false;
+                        statusEl.innerHTML = "✅ Liveness Verified: Blink Detected";
+                        statusEl.style.color = "var(--green)";
+                    } else {
+                        statusEl.innerHTML = "👁️ Please Blink to verify liveness...";
+                        statusEl.style.color = "var(--amber)";
+                    }
                 } else {
-                    isFaceDetected = false;
-                    document.getElementById("captureBtn").disabled = true;
                     statusEl.innerHTML = "Scanning for face...";
                     statusEl.style.color = "white";
                 }
             });
+
             mpCamera = new Camera(video, {
                 onFrame: async () => {
-                    if (faceDetection && video.readyState >= 2) {
-                        await faceDetection.send({image: video});
-                    }
+                    await faceMesh.send({image: video});
                 },
                 width: 640, height: 640
             });
