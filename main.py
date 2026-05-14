@@ -42,6 +42,28 @@ logger.info("=== ClearPass starting (Lazy Loading Mode) ===")
 # Models will load on first use.
 
 # ---------------------------------------------------------------------------
+# Background Warmup
+# ---------------------------------------------------------------------------
+import threading
+
+def warmup_models():
+    """Load heavy models in a background thread to avoid startup timeouts."""
+    try:
+        logger.info("=== Background Warmup: Loading AI models... ===")
+        from services.face_match import match_faces
+        from services.model_a_behavior import score_behavior
+        from services.model_b_anomaly import detect_anomaly
+        from services.model_c_graph import add_user_to_graph
+        from services.cache import get_cached_verdict
+        from services.db import get_verification
+        logger.info("=== Background Warmup: All models loaded successfully! ===")
+    except Exception as e:
+        logger.error(f"=== Background Warmup FAILED: {e} ===")
+
+# Start warmup immediately
+threading.Thread(target=warmup_models, daemon=True).start()
+
+# ---------------------------------------------------------------------------
 # FastAPI App
 # ---------------------------------------------------------------------------
 app = FastAPI(

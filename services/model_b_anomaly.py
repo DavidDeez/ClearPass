@@ -27,14 +27,14 @@ ANOMALY_FEATURES = [
 
 def _train_model() -> tuple[IsolationForest, StandardScaler, float, float]:
     logger.info("Training Model B (Isolation Forest)…")
-    df = generate_synthetic_data(n_samples=150, seed=99, for_anomaly=True)
+    df = generate_synthetic_data(n_samples=50, seed=99, for_anomaly=True)
     X = df[ANOMALY_FEATURES].values
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
     model = IsolationForest(
-        n_estimators=200, contamination=0.05, random_state=42, n_jobs=-1,
+        n_estimators=50, contamination=0.05, random_state=42, n_jobs=1,
     )
     model.fit(X_scaled)
 

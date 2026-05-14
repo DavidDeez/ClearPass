@@ -52,19 +52,19 @@ def _train_model() -> tuple[XGBClassifier, shap.TreeExplainer]:
     """Train the XGBClassifier on synthetic data and attach a SHAP explainer."""
     logger.info("Training Model A (XGBoost Behavior Profiler)…")
 
-    df = generate_synthetic_data(n_samples=200, seed=42, for_anomaly=False)
+    df = generate_synthetic_data(n_samples=50, seed=42, for_anomaly=False)
     X = df[FEATURE_NAMES].values
     y = df["repaid_on_time"].values
 
     model = XGBClassifier(
-        n_estimators=200,
-        max_depth=6,
+        n_estimators=50,
+        max_depth=3,
         learning_rate=0.1,
         objective="binary:logistic",
         eval_metric="logloss",
         use_label_encoder=False,
         random_state=42,
-        n_jobs=-1,
+        n_jobs=1,
     )
     model.fit(X, y)
 
