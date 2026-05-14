@@ -112,9 +112,13 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/", include_in_schema=False)
 async def serve_frontend():
     """Serve the ClearPass frontend UI."""
-    index_path = STATIC_DIR / "index.html"
+    index_path = BASE_DIR / "index.html"
     if not index_path.exists():
-        logger.error(f"Frontend file missing: {index_path}")
+        # Fallback to static if not found in root
+        index_path = STATIC_DIR / "index.html"
+    
+    if not index_path.exists():
+        logger.error(f"Frontend file missing at both root and static: {index_path}")
         return JSONResponse(
             status_code=404, 
             content={"detail": "Frontend index.html not found. Check deployment structure."}
