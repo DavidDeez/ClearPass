@@ -46,8 +46,11 @@ logger.info("=== ClearPass starting (Lazy Loading Mode) ===")
 # ---------------------------------------------------------------------------
 import threading
 
+MODELS_LOADED = False
+
 def warmup_models():
     """Load heavy models in a background thread to avoid startup timeouts."""
+    global MODELS_LOADED
     try:
         logger.info("=== Background Warmup: Loading AI models... ===")
         from services.face_match import match_faces
@@ -56,6 +59,7 @@ def warmup_models():
         from services.model_c_graph import add_user_to_graph
         from services.cache import get_cached_verdict
         from services.db import get_verification
+        MODELS_LOADED = True
         logger.info("=== Background Warmup: All models loaded successfully! ===")
     except Exception as e:
         logger.error(f"=== Background Warmup FAILED: {e} ===")
@@ -114,6 +118,7 @@ class VerifyRequest(BaseModel):
     live_image_b64: str
     official_image_b64: str | None = None
     transactions: list[Transaction]
+    face_match_score: float | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +158,7 @@ async def health_check():
     """Liveness / readiness probe."""
     return {
         "status": "ok", 
-        "models": "loaded", 
+        "models_ready": MODELS_LOADED, 
         "cwd": os.getcwd(),
         "static_exists": STATIC_DIR.exists()
     }
@@ -250,7 +255,26 @@ async def verify(payload: VerifyRequest):
         return {**cached, "cached": True, "processing_time_ms": elapsed}
 
     # ---- Step 2: Biometric face match ----
-    if payload.official_image_b64:
+    if payload.face_match_score is not None:
+        # High-speed lane: Use the score from the frontend
+        logger.info("Using frontend biometric score: %.2f", payload.face_match_score)
+        face_match_score = payload.face_match_score
+        if face_match_score < 0.60: # Basic threshold for speed mode
+            elapsed = round((time.perf_counter() - start) * 1000, 2)
+            logger.info("Biometric mismatch (Frontend) — blocking")
+            block_result = {
+                "trust_score": 0,
+                "verdict": "BLOCK",
+                "reason": "biometric_mismatch",
+                "face_match_score": face_match_score,
+                "cached": False,
+                "processing_time_ms": elapsed,
+            }
+            cache_verdict(payload.bvn, block_result)
+            save_verification(payload.bvn, block_result)
+            return block_result
+    elif payload.official_image_b64:
+        # Standard lane: Server-side match (Heavy)
         try:
             face_result = match_faces(payload.live_image_b64, payload.official_image_b64)
         except ValueError as exc:

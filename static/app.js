@@ -44,7 +44,72 @@ document.addEventListener("DOMContentLoaded", () => {
     if (devInput && !devInput.value) {
         devInput.value = "DEV-" + Math.random().toString(36).substring(2, 10).toUpperCase();
     }
+
+    // Load Face-API models for Speed Mode
+    loadFaceModels();
 });
+
+let modelsLoaded = false;
+let officialIdB64 = null;
+let faceMatchScore = null;
+
+async function loadFaceModels() {
+    console.log("Loading Face-API models...");
+    try {
+        // Use a reliable CDN for the models
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model'; 
+        await Promise.all([
+            faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+            faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+            faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+        modelsLoaded = true;
+        console.log("Face-API models loaded.");
+    } catch (err) {
+        console.error("Failed to load face models:", err);
+    }
+}
+
+async function handleIdUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        officialIdB64 = e.target.result.split(",")[1];
+        const preview = document.getElementById("idPreview");
+        preview.src = e.target.result;
+        preview.style.display = "block";
+        document.getElementById("idPlaceholder").style.display = "none";
+        
+        // Pre-calculate face descriptors if selfie already exists
+        runFrontendMatch();
+    };
+    reader.readAsDataURL(file);
+}
+
+async function runFrontendMatch() {
+    if (!modelsLoaded || !selfieB64 || !officialIdB64) return;
+    
+    console.log("Running frontend biometric match...");
+    try {
+        const selfieImg = await faceapi.fetchImage(`data:image/png;base64,${selfieB64}`);
+        const idImg = await faceapi.fetchImage(`data:image/png;base64,${officialIdB64}`);
+
+        // Using tiny detector for speed on browser
+        const selfieD = await faceapi.detectSingleFace(selfieImg, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+        const idD = await faceapi.detectSingleFace(idImg, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+
+        if (selfieD && idD) {
+            const distance = faceapi.euclideanDistance(selfieD.descriptor, idD.descriptor);
+            // distance < 0.6 is usually a match. Map to 0-1 scale.
+            faceMatchScore = Math.max(0, 1 - (distance / 0.7)); 
+            console.log("Frontend Match Score:", faceMatchScore);
+        }
+    } catch (err) {
+        console.warn("Frontend match failed:", err);
+    }
+}
 
 async function checkServer() {
     const dot = document.getElementById("serverDot");
@@ -65,9 +130,15 @@ async function checkServer() {
         const d = await r.json();
         console.log("Server online:", d);
         
-        dot.className = "status-dot online";
-        txt.textContent = "System Online";
-        txt.style.color = "var(--green)";
+        if (d.models_ready) {
+            dot.className = "status-dot online";
+            txt.textContent = "System Online";
+            txt.style.color = "var(--green)";
+        } else {
+            dot.className = "status-dot warming";
+            txt.textContent = "🚀 Booting AI Engine...";
+            txt.style.color = "var(--amber)";
+        }
     } catch (err) {
         console.warn("Server check failed:", err.message);
         dot.className = "status-dot offline";
@@ -220,6 +291,9 @@ function capturePhoto() {
 
     document.getElementById("captureBtn").style.display = "none";
     document.getElementById("retakeBtn").style.display = "inline-flex";
+
+    // Run match if ID already uploaded
+    runFrontendMatch();
 }
 
 function retakePhoto() {
@@ -349,7 +423,9 @@ async function runVerification() {
         device_id: document.getElementById("deviceId").value.trim(),
         address: document.getElementById("address").value.trim(),
         live_image_b64: selfieB64,
+        official_image_b64: officialIdB64,
         transactions: transactions,
+        face_match_score: faceMatchScore
     };
 
     // Toggle loading state
