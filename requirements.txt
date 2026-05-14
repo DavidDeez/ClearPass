@@ -12,6 +12,7 @@ scikit-learn
 shap
 numpy
 pandas
+joblib
 
 # === Face Recognition (Server-Lite: Using Frontend AI) ===
 Pillow
