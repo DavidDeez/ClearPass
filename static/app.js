@@ -91,10 +91,6 @@ function useExistingIdentity() {
     goToStep(4);
 }
 
-let modelsLoaded = false;
-let officialIdB64 = null;
-let faceMatchScore = null;
-
 async function loadFaceModels() {
     console.log("Loading Face-API models...");
     try {
