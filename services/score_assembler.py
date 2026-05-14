@@ -24,6 +24,7 @@ def assemble_trust_score(
     model_a: dict[str, Any],
     model_b: dict[str, Any],
     model_c: dict[str, Any],
+    features: dict[str, float] = None
 ) -> dict[str, Any]:
     """
     Produce the final ClearPass trust score and verdict.
@@ -33,6 +34,7 @@ def assemble_trust_score(
     model_a : dict  — output of score_behavior()
     model_b : dict  — output of detect_anomaly()
     model_c : dict  — output of score_graph()
+    features : dict — raw feature vector for guardrail checks
 
     Returns
     -------
@@ -44,6 +46,26 @@ def assemble_trust_score(
 
     raw = WEIGHT_A * score_a + WEIGHT_B * score_b + WEIGHT_C * score_c
     trust_score = int(round(raw))
+
+    # --- SMART GUARDRAILS (Production Safety Layer) ---
+    reasons = model_a.get("top_reasons", [])
+    
+    if features:
+        income = features.get("avg_monthly_income", 0)
+        failures = features.get("failed_tx_rate", 0)
+        
+        # High-Risk Flag: No Income + Failures
+        if income == 0 and failures > 0.2:
+            logger.warning("GUARDRAIL TRIGGERED: Zero income + High failure rate. Capping score.")
+            trust_score = min(trust_score, 35)
+            if "⚠ CRITICAL: High failure rate with zero verified income." not in reasons:
+                reasons.append("⚠ CRITICAL: High failure rate with zero verified income.")
+
+        # High-Risk Flag: Excessive loan activity
+        if features.get("loan_keyword_count", 0) > 3:
+             trust_score = min(trust_score, 45)
+             if "⚠ WARNING: Excessive loan-related search activity." not in reasons:
+                reasons.append("⚠ WARNING: Excessive loan-related search activity.")
 
     if trust_score >= 60:
         verdict = "PASS"

@@ -341,7 +341,7 @@ async def verify(payload: VerifyRequest):
     )
 
     # ---- Step 5: Assemble trust score ----
-    verdict = assemble_trust_score(result_a, result_b, result_c)
+    verdict = assemble_trust_score(result_a, result_b, result_c, features)
 
     # ---- Step 6: Build response ----
     elapsed = round((time.perf_counter() - start) * 1000, 2)
