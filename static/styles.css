@@ -368,3 +368,31 @@ body {
     .steps-bar { gap: 0; padding: 20px 12px 4px; flex-wrap: wrap; }
     .step-label { display: none; }
 }
+
+/* --- Document Capture Guide --- */
+.doc-guide {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 85%;
+    height: 60%;
+    border: 2px dashed rgba(255, 255, 255, 0.7);
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.doc-guide::after {
+    content: "PLACE ID CARD HERE";
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 10px;
+    letter-spacing: 2px;
+    font-weight: bold;
+    white-space: nowrap;
+}

@@ -311,6 +311,68 @@ function retakePhoto() {
     if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
 }
 
+async function startIdCamera() {
+    try {
+        let constraints = { video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } };
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+        const video = document.getElementById("idCameraFeed");
+        video.srcObject = cameraStream;
+        video.style.display = "block";
+        try { await video.play(); } catch (e) { console.log("Play error:", e); }
+        
+        document.getElementById("idPreview").style.display = "none";
+        document.getElementById("idPlaceholder").style.display = "none";
+        document.getElementById("idCameraBox").onclick = null;
+        document.getElementById("startIdCameraBtn").style.display = "none";
+        document.getElementById("captureIdBtn").style.display = "inline-flex";
+        document.getElementById("retakeIdBtn").style.display = "none";
+        document.getElementById("idCameraOverlay").style.display = "flex";
+    } catch (err) {
+        console.error("ID Camera error:", err);
+        alert("Camera error: " + err.message);
+    }
+}
+
+function captureIdPhoto() {
+    const video = document.getElementById("idCameraFeed");
+    const canvas = document.getElementById("idCameraCanvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+
+    officialIdB64 = canvas.toDataURL("image/png").split(",")[1];
+
+    const preview = document.getElementById("idPreview");
+    preview.src = canvas.toDataURL("image/png");
+    preview.style.display = "block";
+    video.style.display = "none";
+    document.getElementById("idCameraOverlay").style.display = "none";
+
+    if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+
+    document.getElementById("captureIdBtn").style.display = "none";
+    document.getElementById("retakeIdBtn").style.display = "inline-flex";
+    
+    runFrontendMatch();
+}
+
+function retakeIdPhoto() {
+    officialIdB64 = null;
+    faceMatchScore = null;
+    document.getElementById("idPreview").style.display = "none";
+    document.getElementById("idCameraFeed").style.display = "none";
+    document.getElementById("idCameraOverlay").style.display = "none";
+    document.getElementById("idPlaceholder").style.display = "flex";
+    document.getElementById("idCameraBox").onclick = () => startIdCamera();
+    document.getElementById("retakeIdBtn").style.display = "none";
+    document.getElementById("captureIdBtn").style.display = "none";
+    document.getElementById("startIdCameraBtn").style.display = "inline-flex";
+}
+
 
 
 // ============================================================
