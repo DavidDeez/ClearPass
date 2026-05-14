@@ -677,140 +677,20 @@ async function runVerification() {
 
 // ============================================================
 // RESULTS RENDERING
-// ============================================================
-function renderResults(data) {
-    const score = data.trust_score ?? 0;
-    const verdict = data.verdict ?? "BLOCK";
-    const explanation = data.explanation ?? {};
-    const faceScore = data.face_match_score;
-    const timeMs = data.processing_time_ms;
-    const cached = data.cached;
-
-    // Determine color
-    const colorMap = { PASS: "var(--green)", REVIEW: "var(--amber)", BLOCK: "var(--red)" };
-    const color = colorMap[verdict] || "var(--text-muted)";
-
-    // Score ring circumference
-    const r = 80, circ = 2 * Math.PI * r;
-    const offset = circ - (score / 100) * circ;
-
-    // Model scores from explanation
-    const behavior = explanation.behavior || [];
-    const anomaly = explanation.anomaly || {};
-    const graph = explanation.graph || {};
-
-    const container = document.getElementById("resultsContent");
-    container.innerHTML = `
-        <div class="result-hero">
-            <div class="score-ring">
-                <svg viewBox="0 0 180 180">
-                    <circle class="score-track" cx="90" cy="90" r="${r}"/>
-                    <circle class="score-fill" cx="90" cy="90" r="${r}"
-                        stroke="${color}"
-                        stroke-dasharray="${circ}"
-                        stroke-dashoffset="${circ}"
-                        id="scoreArc"/>
-                </svg>
-                <div class="score-value">
-                    <div class="score-number" style="color:${color}" id="scoreNum">0</div>
-                    <div class="score-label">Trust Score</div>
-                </div>
-            </div>
-            <div class="verdict-badge verdict-${verdict}">
-                ${verdict === "PASS" ? "✅" : verdict === "REVIEW" ? "⚠️" : "🚫"}
-                ${verdict}
-            </div>
-        </div>
-
-        <div class="result-details">
-            <div class="detail-card">
-                <h4>🧠 Behavior Model</h4>
-                <ul>
-                    ${behavior.map(r => `<li>${r}</li>`).join("") || "<li>No data</li>"}
-                </ul>
-            </div>
-            <div class="detail-card">
-                <h4>👻 Ghost Borrower</h4>
-                <div class="detail-score">${anomaly.anomaly_score?.toFixed(1) ?? "—"}<span style="font-size:0.5em;color:var(--text-muted)">/100</span></div>
-                <span class="tag ${anomaly.is_ghost_borrower ? "tag-danger" : "tag-safe"}">
-                    ${anomaly.is_ghost_borrower ? "⚠ GHOST DETECTED" : "✓ Legitimate"}
-                </span>
-            </div>
-            <div class="detail-card">
-                <h4>🔗 Fraud Graph</h4>
-                <div class="detail-score">${graph.cluster_size ?? 1}</div>
-                <p style="font-size:0.82rem;color:var(--text-dim)">Connected identities</p>
-                <span class="tag ${graph.is_fraud_ring ? "tag-danger" : "tag-safe"}" style="margin-top:8px;display:inline-block">
-                    ${graph.is_fraud_ring ? "⚠ FRAUD RING" : "✓ No ring detected"}
-                </span>
-            </div>
-        </div>
-
-        ${faceScore != null ? `
-        <div class="result-meta" style="margin-top:20px">
-            <span>🔍 Face Match: <strong>${(faceScore * 100).toFixed(1)}%</strong></span>
-            <span>⏱ ${timeMs?.toFixed(0) ?? "—"}ms</span>
-            ${cached ? '<span>📦 Cached</span>' : ''}
-        </div>` : `
-        <div class="result-meta" style="margin-top:20px">
-            <span>⏱ ${timeMs?.toFixed(0) ?? "—"}ms</span>
-            ${cached ? '<span>📦 Cached</span>' : ''}
-        </div>`}
-    `;
-
-    // Animate score
-    setTimeout(() => {
-        document.getElementById("scoreArc").style.strokeDashoffset = offset;
-        animateNumber("scoreNum", 0, score, 1200);
-    }, 200);
-}
-
 function renderError(data, status) {
     const detail = data.detail ?? JSON.stringify(data);
-    const reason = data.reason ?? "";
-    const container = document.getElementById("resultsContent");
+    const scoreEl = document.getElementById("finalScore");
+    const gaugeFill = document.getElementById("gaugeFill");
+    const badge = document.getElementById("verdictBadge");
+    const squadStatus = document.getElementById("squadStatus");
+    const reasonList = document.getElementById("reasonList");
 
-    if (reason === "biometric_mismatch" || (typeof detail === "string" && detail.includes("face"))) {
-        container.innerHTML = `
-            <div class="result-hero">
-                <div class="score-ring">
-                    <svg viewBox="0 0 180 180">
-                        <circle class="score-track" cx="90" cy="90" r="80"/>
-                    </svg>
-                    <div class="score-value">
-                        <div class="score-number" style="color:var(--red)">0</div>
-                        <div class="score-label">Trust Score</div>
-                    </div>
-                </div>
-                <div class="verdict-badge verdict-BLOCK">🚫 BLOCK</div>
-            </div>
-            <div class="error-box">
-                <h3>Biometric Verification Failed</h3>
-                <p>${detail}</p>
-                <p style="margin-top:12px;font-size:0.82rem">Ensure both photos contain a clearly visible face.</p>
-            </div>
-        `;
-    } else {
-        container.innerHTML = `
-            <div class="error-box">
-                <h3>Verification Error (${status})</h3>
-                <p>${typeof detail === "string" ? detail : JSON.stringify(detail)}</p>
-            </div>
-        `;
-    }
-}
-
-function animateNumber(id, from, to, duration) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const start = performance.now();
-    function update(now) {
-        const t = Math.min((now - start) / duration, 1);
-        const ease = 1 - Math.pow(1 - t, 3);
-        el.textContent = Math.round(from + (to - from) * ease);
-        if (t < 1) requestAnimationFrame(update);
-    }
-    requestAnimationFrame(update);
+    scoreEl.textContent = "!";
+    gaugeFill.style.background = "conic-gradient(#ff5252 0deg, transparent 0deg)";
+    badge.textContent = "ERROR";
+    badge.className = "verdict-badge verdict-fail";
+    squadStatus.textContent = `Verification Error (${status}): ${detail}`;
+    reasonList.innerHTML = `<li>Error processing request: ${detail}</li>`;
 }
 
 // ============================================================
