@@ -1,56 +1,62 @@
-# ClearPass AI
+# 🛡️ ClearPass AI
+### Portable Trust-Scoring & Identity Infrastructure for African Fintech
 
-ClearPass is a portable KYC and AI trust-scoring API. It verifies identity using live biometric selfies, profiles financial behavior, runs an ensemble of 3 AI models (XGBoost, Isolation Forest, and Graph-based fraud detection), and returns a unified Trust Score (0–100) along with an actionable verdict.
+ClearPass AI is a high-performance identity verification and risk-scoring platform designed to eliminate onboarding friction while maximizing fraud detection. It transforms raw financial and biometric data into a **Multi-Model Trust Score**, acting as a causal gate for high-stakes operations like the **GTCO Squad Payout API**.
 
-## 🚀 Quick Setup & Installation
+---
 
-Follow these steps to run ClearPass locally on your machine.
+## 🧠 The AI Architecture
+
+ClearPass uses a proprietary **Triple-Layer Risk Brain** to evaluate every verification request:
+
+### 1. 👁️ Biometric Integrity (Vision Layer)
+*   **Active Liveness:** Uses **MediaPipe FaceMesh** to track 468 3D landmarks for real-time **Blink Detection** (Eye Aspect Ratio).
+*   **Biometric Matching:** Employs **FaceNet** embeddings to calculate the Euclidean distance between live selfies and government-issued IDs.
+*   **Hybrid AI:** Vision tasks are offloaded to the client-side for sub-second performance, reducing server-side CPU bottlenecks.
+
+### 2. 📈 Behavioral Intelligence (Risk Layer)
+*   **XGBoost Profiler:** Analyzes financial "rhythms" (income consistency, debit/credit ratios, transaction velocity) to predict borrower reliability.
+*   **Isolation Forest Anomaly Detection:** Specifically targets "Ghost Borrowers"—identities that appear legitimate but exhibit outlier spending behaviors indicative of fraud.
+*   **Explainable AI (XAI):** Uses **SHAP (SHapley Additive exPlanations)** to provide human-readable reasons for every score, ensuring transparency and regulatory compliance.
+
+### 3. 🔗 Identity Graph (Network Layer)
+*   **Network Analysis:** Uses **NetworkX** to build a graph of connected identities (BVNs, Devices, Addresses).
+*   **Fraud Ring Detection:** Identifies clusters of identities sharing the same hardware or location, automatically blocking coordinated fraud attempts.
+
+---
+
+## 🛠️ Developer Suite
+
+ClearPass is built as a **Platform**, not just an application.
+
+*   **Identity Search API:** `/api/identity/check/{bvn}` enables the "Verify Once, Use Everywhere" reusable identity model.
+*   **Causal Gate Enforcement:** Seamlessly integrates with the **GTCO Squad API** to block payouts for high-risk users.
+*   **Monitoring Dashboard:** Real-time logging and fraud analytics at `/dashboard`.
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-- Python 3.8+ installed on your system.
-- Git installed.
+- Python 3.9+
+- SQLite (for tokenization persistence)
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/DavidDeez/ClearPass.git
-cd ClearPass
-```
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/DavidDeez/ClearPass.git
+   ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Run the development server:
+   ```bash
+   python main.py
+   ```
+4. Access the Demo at `http://localhost:8000` or the Admin Console at `http://localhost:8000/dashboard`.
 
-### 2. Set Up a Virtual Environment
-It is highly recommended to use a virtual environment to install the dependencies.
+---
 
-**On Windows:**
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-**On macOS / Linux:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-With the virtual environment activated, install the required packages:
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Run the Server
-Start the FastAPI application:
-```bash
-python main.py
-```
-> **⏳ Important Note on Startup Time:** The server eagerly loads several heavy machine learning models (like FaceNet for biometrics and XGBoost) into memory upon startup. This means **it may take 15–45 seconds for the server to fully boot up.** Please wait until the console displays that the application is running before opening the browser.
-
-Once you see the startup complete message in your terminal, the server is ready!
-
-## 🧪 Testing the Application
-
-1. **Access the UI**: Open your web browser and navigate to [http://localhost:8000](http://localhost:8000).
-2. **KYC Flow**: 
-   - Fill in the basic identity details in Step 1.
-   - Use your webcam to take a live selfie (the application enforces a live camera feed).
-   - Insert transaction history (or just use the built-in "Use Sample Data" tab).
-   - Click **Run AI Verification** to see the final Trust Score, AI explanation, and fraud detection verdict.
+## 🏆 Hackathon 2026 Submission
+Built for the **GTCO Squad Hackathon**, ClearPass AI solves the dual problem of onboarding friction and financial fraud using state-of-the-art machine learning and network theory.
